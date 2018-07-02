@@ -2,38 +2,56 @@ pragma solidity ^0.4.2;
 
 contract DominantAssuranceContract {
     address public entrepreneur;
-    uint256 public pledgesGoal;
-    uint256 public totalPledges;
-    uint256 public pledgesCount;
-    uint256 pledgeDeadline;
-    uint256 refundPercentage;
-    mapping(address => uint256) public pledgeBalance;
-    address beneficiary;
+    mapping(address => uint256) pledgerBalance;
+    uint256 public pledgeCountGoal;
+    uint256 public pledgeAmount;
+    uint256 public refundPercentage;
+    uint256 public pledgeCount;
+    uint256 public pledgeDeadline;
 
-    constructor(uint256 lengthOfPledge, uint256 _goal, uint8 _refundPercentage, address _beneficiary) public payable {
+    //constructor
+    constructor (uint256 _pledgeCountGoal, uint256 _pledgeAmount,uint256 _refundPercentage, uint256 _campaignLength) {
         entrepreneur = msg.sender;
-        beneficiary = _beneficiary;
-        pledgesGoal = _goal;
-        pledgeDeadline = now + (lengthOfPledge * 1 days);
+        pledgeAmount = _pledgeAmount;
+        pledgeCountGoal = _pledgeCountGoal;
         refundPercentage = _refundPercentage;
-        pledgeBalance[entrepreneur] = msg.value;
-        pledgesCount = 0;
+        pledgeDeadline = now + (_campaignLength * 1 days);
+        beneficiary = _beneficiary;
     }
 
-    function pledge(uint256 amount) public payable {
-        require(now < pledgeDeadline, "The campaign is over");
-        require(msg.value == amount, "The amount is incorrect");
-        //require(msg.sender != owner,)
+    //pledge
+    function pledge (uint256 amount) public payable {
+        require(now < pledgeDeadline, "Campaign deadline has been reached");
+        require(pledgerBalance[msg.sender] == 0, "You have already pledged");
+        require(msg.value == pledgeAmount, "Pledge amount is incorrect");
 
-        uint256 payout = amount * (refundPercentage / 100);
-        if (payout > pledgeBalance[entrepreneur]) {
-            payout = pledgeBalance[entrepreneur];
-        }
 
-        pledgeBalance[entrepreneur] -= payout;
-        pledgeBalance[msg.sender] += payout;
-        totalPledges += amount;
-        pledgesCount++;
+        uint256 addPayoff = amount + (refundPercentage / 100); // check integer division rules
+
+        pledgerBalance[msg.sender] += amount + addPayoff;
+        pledgeCount += 1;
     }
+
+
+    function claimFunds() public {
+        require(msg.sender == entrepreneur, "Only the entrepreneur can claim");
+        require(pledgeCount >= pledgeCountGoal, "Campaign has not succeeded yet")
+        require(now > deadline, "The campaign is not over yet")
+
+        msg.sender.transfer(address(this).balance);
+
+    }
+
+    function getRefund() public {
+        require(now > deadline, "The campaign is not over");
+        require(pledgeCount < pledgeCountGoal, "The campaign did not fail");
+
+        uint256 amount = pledgerBalance[msg.sender];
+        pledgerBalance[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+
+
 
 }
+
